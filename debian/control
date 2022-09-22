@@ -1,0 +1,45 @@
+Source: mako
+Section: python
+Priority: optional
+Maintainer: Piotr Ożarowski <piotr@debian.org>
+Uploaders: Debian Python Modules Team <python-modules-team@lists.alioth.debian.org>
+Testsuite: autopkgtest-pkg-python
+Rules-Requires-Root: no
+Build-Depends: debhelper-compat (= 12), dh-python
+Build-Depends-Indep: python3-all, python3-setuptools,
+ python3-sphinx <!nodoc>, python3-changelog <!nodoc>,
+ python3-sphinx-paramlinks <!nodoc>,
+ python3-pytest <!nocheck>, python3-markupsafe <!nocheck>, python3-mock <!nocheck>,
+ python3-zzzeeksphinx <!nodoc>
+Standards-Version: 4.5.0
+Homepage: https://www.makotemplates.org/
+Vcs-Git: https://salsa.debian.org/python-team/packages/mako.git
+Vcs-Browser: https://salsa.debian.org/python-team/packages/mako
+
+Package: python3-mako
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}
+Breaks: python-mako (<< 1.1.0+ds1-1)
+Replaces: python-mako (<< 1.1.0+ds1-1)
+Suggests: ${python3:Suggests}, python3-beaker, python-mako-doc <!nodoc>
+Description: fast and lightweight templating for the Python 3 platform
+ Mako is a template library written in Python. It provides a familiar, non-XML
+ syntax which compiles into Python modules for maximum performance. Mako's
+ syntax and API borrows from the best ideas of many others, including Django
+ templates, Cheetah, Myghty, and Genshi. Conceptually, Mako is an embedded
+ Python (i.e. Python Server Page) language, which refines the familiar ideas of
+ componentized layout and inheritance to produce one of the most
+ straightforward and flexible models available, while also maintaining close
+ ties to Python calling and scoping semantics.
+
+Package: python-mako-doc
+Section: doc
+Build-Profiles: <!nodoc>
+Architecture: all
+Depends: libjs-jquery, libjs-underscore, ${misc:Depends}
+Suggests: python3-mako
+Description: documentation for the Mako Python library
+ Mako is a template library written in Python.
+ .
+ This package contains the documentation for Mako in HTML and
+ reStructuredText formats.

@@ -1,0 +1,7 @@
+version=3
+opts=\
+uversionmangle=s/(rc|a|b|c)/~$1/,\
+pgpsigurlmangle=s/$/.asc/,\
+dversionmangle=s/\+ds\d*$//,\
+repacksuffix=+ds1 \
+https://pypi.debian.net/Mako/Mako-(.+)\.(?:zip|tgz|tbz|txz|(?:tar\.(?:gz|bz2|xz)))
