@@ -3,8 +3,174 @@
 Changelog
 =========
 
+1.2
+===
+
+.. changelog::
+    :version: 1.2.4
+    :released: Tue Nov 15 2022
+
+    .. change::
+        :tags: bug, codegen
+        :tickets: 368
+
+        Fixed issue where unpacking nested tuples in a for loop using would raise a
+        "couldn't apply loop context" error if the loop context was used. The regex
+        used to match the for loop expression now allows the list of loop variables
+        to contain parenthesized sub-tuples. Pull request courtesy Matt Trescott.
+
+
+.. changelog::
+    :version: 1.2.3
+    :released: Thu Sep 22 2022
+
+    .. change::
+        :tags: bug, lexer
+        :tickets: 367
+
+        Fixed issue in lexer in the same category as that of :ticket:`366` where
+        the regexp used to match an end tag didn't correctly organize for matching
+        characters surrounded by whitespace, leading to high memory / interpreter
+        hang if a closing tag incorrectly had a large amount of unterminated space
+        in it. Credit to Sebastian Chnelik for locating the issue.
+
+        As Mako templates inherently render and directly invoke arbitrary Python
+        code from the template source, it is **never** appropriate to create
+        templates that contain untrusted input.
+
+.. changelog::
+    :version: 1.2.2
+    :released: Mon Aug 29 2022
+
+    .. change::
+        :tags: bug, lexer
+        :tickets: 366
+
+        Fixed issue in lexer where the regexp used to match tags would not
+        correctly interpret quoted sections individually. While this parsing issue
+        still produced the same expected tag structure later on, the mis-handling
+        of quoted sections was also subject to a regexp crash if a tag had a large
+        number of quotes within its quoted sections.  Credit to Sebastian
+        Chnelik for locating the issue.
+
+        As Mako templates inherently render and directly invoke arbitrary Python
+        code from the template source, it is **never** appropriate to create
+        templates that contain untrusted input.
+
+.. changelog::
+    :version: 1.2.1
+    :released: Thu Jun 30 2022
+
+    .. change::
+        :tags: performance
+        :tickets: 361
+
+        Optimized some codepaths within the lexer/Python code generation process,
+        improving performance for generation of templates prior to their being
+        cached. Pull request courtesy Takuto Ikuta.
+
+    .. change::
+        :tags: bug, tests
+        :tickets: 360
+
+        Various fixes to the test suite in the area of exception message rendering
+        to accommodate for variability in Python versions as well as Pygments.
+
+.. changelog::
+    :version: 1.2.0
+    :released: Thu Mar 10 2022
+
+    .. change::
+        :tags: changed, py3k
+        :tickets: 351
+
+        Corrected "universal wheel" directive in ``setup.cfg`` so that building a
+        wheel does not target Python 2.
+
+    .. change::
+        :tags: changed, py3k
+
+        The ``bytestring_passthrough`` template argument is removed, as this
+        flag only applied to Python 2.
+
+    .. change::
+        :tags: changed, py3k
+
+        With the removal of Python 2's ``cStringIO``, Mako now uses its own
+        internal ``FastEncodingBuffer`` exclusively.
+
+    .. change::
+        :tags: changed, py3k
+
+        Removed ``disable_unicode`` flag, that's no longer used in Python 3.
+
+    .. change::
+        :tags: changed
+        :tickets: 349
+
+        Refactored test utilities into ``mako.testing`` module. Removed
+        ``unittest.TestCase`` dependency in favor of ``pytest``.
+
+    .. change::
+        :tags: changed, setup
+
+        Replaced the use of ``pkg_resources`` with the ``importlib`` library.
+        For Python < 3.8 the library ``importlib_metadata`` is used.
+
+    .. change::
+        :tags: changed, py3k
+
+        Removed support for Python 2 and Python 3.6. Mako now requires Python >=
+        3.7.
+
+    .. change::
+        :tags: bug, py3k
+
+        Mako now performs exception chaining using ``raise from``, correctly
+        identifying underlying exception conditions when it raises its own
+        exceptions. Pull request courtesy Ram Rachum.
+
 1.1
 ===
+
+.. changelog::
+    :version: 1.1.6
+    :released: Wed Nov 17 2021
+
+    .. change::
+        :tags: bug, lexer
+        :tickets: 346
+        :versions: 1.2.0, 1.1.6
+
+        Fixed issue where control statements on multi lines with a backslash would
+        not parse correctly if the template itself contained CR/LF pairs as on
+        Windows. Pull request courtesy Charles Pigott.
+
+
+.. changelog::
+    :version: 1.1.5
+    :released: Fri Aug 20 2021
+
+    .. change::
+        :tags: bug, tests
+        :tickets: 338
+
+        Fixed some issues with running the test suite which would be revealed by
+        running tests in random order.
+
+
+
+.. changelog::
+    :version: 1.1.4
+    :released: Thu Jan 14 2021
+
+    .. change::
+        :tags: bug, py3k
+        :tickets: 328
+
+        Fixed Python deprecation issues related to module importing, as well as
+        file access within the Lingua plugin, for deprecated APIs that began to
+        emit warnings under Python 3.10.  Pull request courtesy Petr Viktorin.
 
 .. changelog::
     :version: 1.1.3

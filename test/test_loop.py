@@ -7,9 +7,9 @@ from mako.lookup import TemplateLookup
 from mako.runtime import LoopContext
 from mako.runtime import LoopStack
 from mako.template import Template
-from test import assert_raises_message
-from test import TemplateTest
-from test.util import flatten_result
+from mako.testing.assertions import assert_raises_message
+from mako.testing.fixtures import TemplateTest
+from mako.testing.helpers import flatten_result
 
 
 class TestLoop(unittest.TestCase):
@@ -30,6 +30,16 @@ class TestLoop(unittest.TestCase):
                 "for x in [y+1 for y in [1, 2, 3]]:",
                 "x",
                 "[y+1 for y in [1, 2, 3]]",
+            ),
+            (
+                "for ((key1, val1), (key2, val2)) in pairwise(dict.items()):",
+                "((key1, val1), (key2, val2))",
+                "pairwise(dict.items())",
+            ),
+            (
+                "for (key1, val1), (key2, val2) in pairwise(dict.items()):",
+                "(key1, val1), (key2, val2)",
+                "pairwise(dict.items())",
             ),
         ):
             match = _FOR_LOOP.match(statement)
@@ -199,7 +209,7 @@ class TestLoopContext(unittest.TestCase):
 
     def test_reverse_index(self):
         length = len(self.iterable)
-        expected = tuple([length - i - 1 for i in range(length)])
+        expected = tuple(length - i - 1 for i in range(length))
         actual = tuple(self.ctx.reverse_index for i in self.ctx)
         print(expected, actual)
         assert expected == actual, (

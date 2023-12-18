@@ -1,15 +1,18 @@
 import re
 
+import pytest
+
 from mako import compat
 from mako import exceptions
 from mako import parsetree
 from mako import util
 from mako.lexer import Lexer
 from mako.template import Template
-from test import assert_raises_message
-from test import eq_
-from test import TemplateTest
-from test.util import flatten_result
+from mako.testing.assertions import assert_raises
+from mako.testing.assertions import assert_raises_message
+from mako.testing.assertions import eq_
+from mako.testing.fixtures import TemplateTest
+from mako.testing.helpers import flatten_result
 
 # create fake parsetree classes which are constructed
 # exactly as the repr() of a real parsetree object.
@@ -25,12 +28,11 @@ def repr_arg(x):
 
 
 def _as_unicode(arg):
-    if isinstance(arg, compat.string_types):
-        return compat.text_type(arg)
-    elif isinstance(arg, dict):
-        return dict((_as_unicode(k), _as_unicode(v)) for k, v in arg.items())
+    if isinstance(arg, dict):
+        return {k: _as_unicode(v) for k, v in arg.items()}
     else:
         return arg
+
 
 Node = None
 TemplateNode = None
@@ -59,7 +61,7 @@ for cls in list(parsetree.__dict__.values()):
         exec(
             (
                 """
-class %s(object):
+class %s:
     def __init__(self, *args):
         self.args = [_as_unicode(arg) for arg in args]
     def __repr__(self):
@@ -138,13 +140,23 @@ class LexerTest(TemplateTest):
 
             hi.
         """
-        self.assertRaises(exceptions.SyntaxException, Lexer(template).parse)
+        assert_raises(exceptions.SyntaxException, Lexer(template).parse)
 
     def test_noexpr_allowed(self):
         template = """
             <%namespace name="${foo}"/>
         """
-        self.assertRaises(exceptions.CompileException, Lexer(template).parse)
+        assert_raises(exceptions.CompileException, Lexer(template).parse)
+
+    def test_closing_tag_many_spaces(self):
+        """test #367"""
+        template = '<%def name="foo()"> this is a def. </%' + " " * 10000
+        assert_raises(exceptions.SyntaxException, Lexer(template).parse)
+
+    def test_opening_tag_many_quotes(self):
+        """test #366"""
+        template = "<%0" + '"' * 3000
+        assert_raises(exceptions.SyntaxException, Lexer(template).parse)
 
     def test_unmatched_tag(self):
         template = """
@@ -157,13 +169,13 @@ class LexerTest(TemplateTest):
 
         hi.
 """
-        self.assertRaises(exceptions.SyntaxException, Lexer(template).parse)
+        assert_raises(exceptions.SyntaxException, Lexer(template).parse)
 
     def test_nonexistent_tag(self):
         template = """
             <%lala x="5"/>
         """
-        self.assertRaises(exceptions.CompileException, Lexer(template).parse)
+        assert_raises(exceptions.CompileException, Lexer(template).parse)
 
     def test_wrongcase_tag(self):
         template = """
@@ -171,7 +183,7 @@ class LexerTest(TemplateTest):
             </%def>
 
         """
-        self.assertRaises(exceptions.CompileException, Lexer(template).parse)
+        assert_raises(exceptions.CompileException, Lexer(template).parse)
 
     def test_percent_escape(self):
         template = """
@@ -247,7 +259,7 @@ class LexerTest(TemplateTest):
                                 " % more code\n            "
                                 "<%illegal compionent>/></>\n"
                                 '            <%def name="laal()">def</%def>'
-                                '\n\n\n        ',
+                                "\n\n\n        ",
                                 (6, 16),
                             )
                         ],
@@ -274,7 +286,7 @@ class LexerTest(TemplateTest):
             hi
         </%def>
 """
-        self.assertRaises(exceptions.CompileException, Lexer(template).parse)
+        assert_raises(exceptions.CompileException, Lexer(template).parse)
 
     def test_def_syntax_2(self):
         template = """
@@ -282,7 +294,7 @@ class LexerTest(TemplateTest):
             hi
         </%def>
     """
-        self.assertRaises(exceptions.CompileException, Lexer(template).parse)
+        assert_raises(exceptions.CompileException, Lexer(template).parse)
 
     def test_whitespace_equals(self):
         template = """
@@ -432,9 +444,16 @@ class LexerTest(TemplateTest):
             ),
         )
 
-    def test_pagetag(self):
-        template = """
-            <%page cached="True", args="a, b"/>
+    @pytest.mark.parametrize("comma,numchars", [(",", 48), ("", 47)])
+    def test_pagetag(self, comma, numchars):
+        # note that the comma here looks like:
+        # <%page cached="True", args="a, b"/>
+        # that's what this test has looked like for decades, however, the
+        # comma there is not actually the right syntax.  When issue #366
+        # was fixed, the reg was altered to accommodate for this comma to allow
+        # backwards compat
+        template = f"""
+            <%page cached="True"{comma} args="a, b"/>
 
             some template
         """
@@ -453,7 +472,7 @@ class LexerTest(TemplateTest):
 
             some template
         """,
-                        (2, 48),
+                        (2, numchars),
                     ),
                 ],
             ),
@@ -515,10 +534,8 @@ class LexerTest(TemplateTest):
             ),
         )
 
-    if compat.py3k:
-
-        def test_code(self):
-            template = """text
+    def test_code(self):
+        template = """text
     <%
         print("hi")
         for x in range(1,5):
@@ -529,59 +546,25 @@ more text
         import foo
     %>
 """
-            nodes = Lexer(template).parse()
-            self._compare(
-                nodes,
-                TemplateNode(
-                    {},
-                    [
-                        Text("text\n    ", (1, 1)),
-                        Code(
-                            '\nprint("hi")\nfor x in range(1,5):\n    '
-                            "print(x)\n    \n",
-                            False,
-                            (2, 5),
-                        ),
-                        Text("\nmore text\n    ", (6, 7)),
-                        Code("\nimport foo\n    \n", True, (8, 5)),
-                        Text("\n", (10, 7)),
-                    ],
-                ),
-            )
-
-    else:
-
-        def test_code(self):
-            template = """text
-    <%
-        print "hi"
-        for x in range(1,5):
-            print x
-    %>
-more text
-    <%!
-        import foo
-    %>
-"""
-            nodes = Lexer(template).parse()
-            self._compare(
-                nodes,
-                TemplateNode(
-                    {},
-                    [
-                        Text("text\n    ", (1, 1)),
-                        Code(
-                            '\nprint "hi"\nfor x in range(1,5):\n    '
-                            "print x\n    \n",
-                            False,
-                            (2, 5),
-                        ),
-                        Text("\nmore text\n    ", (6, 7)),
-                        Code("\nimport foo\n    \n", True, (8, 5)),
-                        Text("\n", (10, 7)),
-                    ],
-                ),
-            )
+        nodes = Lexer(template).parse()
+        self._compare(
+            nodes,
+            TemplateNode(
+                {},
+                [
+                    Text("text\n    ", (1, 1)),
+                    Code(
+                        '\nprint("hi")\nfor x in range(1,5):\n    '
+                        "print(x)\n    \n",
+                        False,
+                        (2, 5),
+                    ),
+                    Text("\nmore text\n    ", (6, 7)),
+                    Code("\nimport foo\n    \n", True, (8, 5)),
+                    Text("\n", (10, 7)),
+                ],
+            ),
+        )
 
     def test_code_and_tags(self):
         template = """
@@ -741,20 +724,11 @@ more text
         )
 
     def test_tricky_code(self):
-        if compat.py3k:
-            template = """<% print('hi %>') %>"""
-            nodes = Lexer(template).parse()
-            self._compare(
-                nodes,
-                TemplateNode({}, [Code("print('hi %>') \n", False, (1, 1))]),
-            )
-        else:
-            template = """<% print 'hi %>' %>"""
-            nodes = Lexer(template).parse()
-            self._compare(
-                nodes,
-                TemplateNode({}, [Code("print 'hi %>' \n", False, (1, 1))]),
-            )
+        template = """<% print('hi %>') %>"""
+        nodes = Lexer(template).parse()
+        self._compare(
+            nodes, TemplateNode({}, [Code("print('hi %>') \n", False, (1, 1))])
+        )
 
     def test_tricky_code_2(self):
         template = """<%
@@ -780,77 +754,42 @@ more text
             ),
         )
 
-    if compat.py3k:
-
-        def test_tricky_code_3(self):
-            template = """<%
-            print('hi')
-            # this is a comment
-            # another comment
-            x = 7 # someone's '''comment
-            print('''
-        there
-        ''')
-            # someone else's comment
+    def test_tricky_code_3(self):
+        template = """<%
+        print('hi')
+        # this is a comment
+        # another comment
+        x = 7 # someone's '''comment
+        print('''
+    there
+    ''')
+        # someone else's comment
 %> '''and now some text '''"""
-            nodes = Lexer(template).parse()
-            self._compare(
-                nodes,
-                TemplateNode(
-                    {},
-                    [
-                        Code(
-                            """
+        nodes = Lexer(template).parse()
+        self._compare(
+            nodes,
+            TemplateNode(
+                {},
+                [
+                    Code(
+                        """
 print('hi')
 # this is a comment
 # another comment
 x = 7 # someone's '''comment
 print('''
-        there
-        ''')
+    there
+    ''')
 # someone else's comment
 
 """,
-                            False,
-                            (1, 1),
-                        ),
-                        Text(" '''and now some text '''", (10, 3)),
-                    ],
-                ),
-            )
-
-    else:
-
-        def test_tricky_code_3(self):
-            template = """<%
-            print 'hi'
-            # this is a comment
-            # another comment
-            x = 7 # someone's '''comment
-            print '''
-        there
-        '''
-            # someone else's comment
-%> '''and now some text '''"""
-            nodes = Lexer(template).parse()
-            self._compare(
-                nodes,
-                TemplateNode(
-                    {},
-                    [
-                        Code(
-                            """\nprint 'hi'\n# this is a comment\n"""
-                            """# another comment\nx = 7 """
-                            """# someone's '''comment\nprint '''\n        """
-                            """there\n        '''\n# someone else's """
-                            """comment\n\n""",
-                            False,
-                            (1, 1),
-                        ),
-                        Text(" '''and now some text '''", (10, 3)),
-                    ],
-                ),
-            )
+                        False,
+                        (1, 1),
+                    ),
+                    Text(" '''and now some text '''", (10, 3)),
+                ],
+            ),
+        )
 
     def test_tricky_code_4(self):
         template = """<% foo = "\\"\\\\" %>"""
